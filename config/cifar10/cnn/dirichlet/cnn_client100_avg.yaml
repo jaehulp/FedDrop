@@ -1,0 +1,31 @@
+output_dir: ./output/cifar10/cnn2/dirichlet/client100/avg_nosvd
+datapath: ./data/generated_dataset/cifar10/dirichlet_100
+seed: 999
+save_interval: 10
+model:
+  model_name: CNN2
+  in_features: 3
+  num_classes: 10
+  dim: 1600
+server:
+  num_clients: 100
+  num_join_clients: 10
+  epochs: 300
+  batch_size: 1024
+  aggregate_cov: avg
+  svd_proj: False
+  avg_temp: 3
+client:
+  batch_size : 64
+  local_epochs: 10
+  loss:
+    loss_name: CrossEntropyLoss
+    label_smoothing: 0
+  save_client: True
+  optimizer:
+    optimizer_name: SGD
+    lr: 0.01
+    weight_decay: 0.0005
+    momentum: 0.9
+  transform:
+    use_transform: False
