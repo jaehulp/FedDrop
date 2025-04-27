@@ -58,16 +58,46 @@ def minus_avg(list1, list2):
     return c.tolist(), d.item()
 
 
-diff, mean =minus_avg(acc1_avg_cov_mean[:50], acc1_default[:50])
-print(mean)
-diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
-print(mean)
 
+plt.figure()
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
 
-diff, mean = minus_avg(acc1_drop_cov_mean[:50], acc1_default[:50])
-print(mean)
+diff, mean = minus_avg(acc1_drop_test_acc, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='test_Acc')
 
 diff, mean = minus_avg(acc1_drop_cov_mean, acc1_default)
-print(mean)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_cov')
 
+diff, mean = minus_avg(acc1_drop_svd_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_svd')
+
+diff, mean = minus_avg(acc1_drop_topk_svd, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_topk_svd')
+
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_drop_ResNet18', dpi =300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+
+diff, mean = minus_avg(acc1_drop_test_acc, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='test_Acc')
+
+diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_cov')
+
+diff, mean =minus_avg(acc1_avg_svd_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_svd')
+
+diff, mean =minus_avg(acc1_avg_topk_svd, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_topk')
+
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_avg_ResNet18', dpi =300)
 

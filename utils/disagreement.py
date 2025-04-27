@@ -66,7 +66,7 @@ def compute_cov_mean(server_output, client_output):
 #    angle_rad = batched_angle_between(Vt_s[:5], Vt_c[:5])
 #    print(angle_rad[:5] * 180 / torch.pi)
 
-    return mean, svd_mean, topk_svd_mean
+    return mean, svd_mean, topk_svd_mean, std, svd_std
 
 from utils.ops import features, accuracy, AverageMeter
 
@@ -88,6 +88,8 @@ def measure_client_cov(epoch, model_dir, data_dir, model_args, model_list, idx_l
     cov_mean_list = []
     svd_cov_mean_list = []
     topk_svd_mean_list = []
+    cov_std_list = []
+    svd_std_list = []
 
     for m, idx in zip(model_list, idx_list):
         data = read_client_data(data_dir, idx)
@@ -122,12 +124,15 @@ def measure_client_cov(epoch, model_dir, data_dir, model_args, model_list, idx_l
 
         server_output = torch.cat(server_output)
         client_output = torch.cat(client_output)
-        cov_mean, svd_cov_mean, topk_svd_mean = compute_cov_mean(server_output, client_output)
+        cov_mean, svd_cov_mean, topk_svd_mean, cov_std, svd_std = compute_cov_mean(server_output, client_output)
         cov_mean_list.append(cov_mean.item())
         svd_cov_mean_list.append(svd_cov_mean.item())
         topk_svd_mean_list.append(topk_svd_mean.item())
+        cov_std_list.append(cov_std.item())
+        svd_std_list.append(svd_std.item())
 
-    return client_acc_list, cov_mean_list, svd_cov_mean_list, topk_svd_mean_list
+
+    return client_acc_list, cov_mean_list, svd_cov_mean_list, topk_svd_mean_list, cov_std_list, svd_std_list
 
 def measure_client_testset(epoch, model_dir, data_dir, dataloader, model_args, model_list, idx_list):
 
@@ -146,6 +151,8 @@ def measure_client_testset(epoch, model_dir, data_dir, dataloader, model_args, m
     cov_mean_list = []
     svd_cov_mean_list = []
     topk_svd_mean_list = []
+    cov_std_list = []
+    svd_std_list = []
 
     server_output = []
     
@@ -198,10 +205,12 @@ def measure_client_testset(epoch, model_dir, data_dir, dataloader, model_args, m
         pred_mat.append(pred_list)
 
         client_output = torch.cat(client_output)
-        cov_mean, svd_cov_mean, topk_svd_mean = compute_cov_mean(server_output, client_output)
+        cov_mean, svd_cov_mean, topk_svd_mean, cov_std, svd_std = compute_cov_mean(server_output, client_output)
         cov_mean_list.append(cov_mean.item())
         svd_cov_mean_list.append(svd_cov_mean.item())
         topk_svd_mean_list.append(topk_svd_mean.item())
+        cov_std_list.append(cov_std.item())
+        svd_std_list.append(svd_std.item())
 
     pred_mat = torch.stack(pred_mat)
     pred_mat_1 = pred_mat.unsqueeze(0)
@@ -211,7 +220,7 @@ def measure_client_testset(epoch, model_dir, data_dir, dataloader, model_args, m
     dis_mat = torch.sum(pred_mat, dim=2) / pred_mat.shape[2]
     dis_list = dis_mat[0, 1:]
 
-    return client_acc_list, cov_mean_list, svd_cov_mean_list, topk_svd_mean_list, dis_list
+    return client_acc_list, cov_mean_list, svd_cov_mean_list, topk_svd_mean_list, dis_list, cov_std_list, svd_std_list
 
 import torchvision
 

@@ -5,9 +5,6 @@ import yaml
 import torch
 import numpy as np
 
-import matplotlib.pyplot as plt 
-
-
 log_path = './plot_log/dirichlet_log.txt'
 
 with open(log_path, 'r') as file:
@@ -50,24 +47,17 @@ for line in log_data:
         acc = float(re.search(r'Acc1 avg topk_svd_cov (\d+\.\d+)', line).group(1))
         acc1_avg_topk_svd.append(acc)
 
+
 def minus_avg(list1, list2):
     a = torch.tensor(list1)
     b = torch.tensor(list2)
-    c = a-b
-    d = torch.mean(c)
-    return c.tolist(), d.item()
+    c = torch.mean(a-b)
+    print(c)
 
-
-diff, mean =minus_avg(acc1_avg_cov_mean[:50], acc1_default[:50])
-print(mean)
-diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
-print(mean)
-
-
-diff, mean = minus_avg(acc1_drop_cov_mean[:50], acc1_default[:50])
-print(mean)
-
-diff, mean = minus_avg(acc1_drop_cov_mean, acc1_default)
-print(mean)
-
-
+minus_avg(acc1_drop_test_acc, acc1_default)
+minus_avg(acc1_drop_cov_mean, acc1_default)
+minus_avg(acc1_drop_svd_mean, acc1_default)
+minus_avg(acc1_drop_topk_svd, acc1_default)
+minus_avg(acc1_avg_cov_mean, acc1_default)
+minus_avg(acc1_avg_svd_mean, acc1_default)
+minus_avg(acc1_avg_topk_svd, acc1_default)

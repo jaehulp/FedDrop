@@ -2,3 +2,4 @@ data/
 graph_img/
 output/
 **/__pycache__/
+plot_log/

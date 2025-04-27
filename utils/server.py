@@ -141,9 +141,7 @@ class Server(object):
                 client_output = (Vt[:50] @ client_output.permute(1,0)).T
 
             output_mat = torch.stack([global_output, client_output])
-            cov_mat = compute_cov(output_mat)
-            cov_val = cov_mat[0,1,:,:]
-            cov_val = torch.diagonal(cov_val)
+            cov_val = compute_cov(output_mat)
 
             if self.args_server.svd_proj == True:
                 cov_val = abs(cov_val)
