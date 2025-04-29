@@ -18,11 +18,12 @@ dataset_name = 'cifar10'
 
 num_client = 50
 num_join_client = 10
+num_classes = 10
 
 model_dict = {
     'model_name': 'ResNet',
     'block': 'BasicBlock',
-    'num_classes': 10,
+    'num_classes': num_classes,
     'num_blocks': [2,2,2,2]
 }
 
@@ -42,7 +43,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 model_dict = DotMap(model_dict)
 model = load_model(model_dict)
 
-num_samples = client_num_samples(data_dir, num_client, num_join_client)
+num_samples = client_num_samples(data_dir, num_client, num_classes)
 
 for i in range(2, 301):
     epoch = i
@@ -77,6 +78,10 @@ for i in range(2, 301):
     new_list = [model_list[i] for i in idx]
     acc1 = simple_model_aggregate(model, [model_list[i] for i in idx], norm_weight, testloader)
     logger.info(f'Acc1 default test_acc {acc1}')
+
+    simple_weight = [1/len(idx) for i in idx]
+    acc1 = simple_model_aggregate(model, [model_list[i] for i in idx], simple_weight, testloader)
+    logger.info(f'Acc1 simple avg test_acc {acc1}')
 
     idx = np.argsort(testset_client_acc_list)
     idx = idx[2:]

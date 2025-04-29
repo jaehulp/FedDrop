@@ -72,13 +72,13 @@ def compute_cov(proj_matrix):
 
 import json
 
-def client_num_samples(data_dir, num_client, num_join_client):
+def client_num_samples(data_dir, num_client, num_classes):
     json_dir = os.path.join(data_dir, 'config.json')
     with open(json_dir) as file:
         data = json.load(file)
     
     samples_data = data['Size of samples for labels in clients']
-    arr = np.zeros(shape=(num_client, num_join_client))
+    arr = np.zeros(shape=(num_client, num_classes))
     for i, c in enumerate(samples_data):
         for e in c:
             arr[i, e[0]] = e[1]

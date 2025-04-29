@@ -1,18 +1,20 @@
-output_dir: ./output/cifar100/cnn2/iid/client100/default
-datapath: ./data/generated_dataset/cifar100/iid_100
-seed: 999
+output_dir: ./output/cifar10/resnet/dirichlet/client50/cov_avg
+datapath: ./data/generated_dataset/cifar10/dirichlet_50
+seed: 111
 save_interval: 1
 model:
-  model_name: CNN2
-  in_features: 3
-  num_classes: 100
-  dim: 1600
+  model_name: ResNet
+  block: BasicBlock
+  num_classes: 10
+  num_blocks: [2,2,2,2]  
 server:
-  num_clients: 100
+  num_clients: 50
   num_join_clients: 10
   epochs: 300
   batch_size: 1024
-  aggregate_cov: False
+  aggregate_cov: avg
+  svd_proj: False
+  avg_temp: 3
 client:
   batch_size : 64
   local_epochs: 10

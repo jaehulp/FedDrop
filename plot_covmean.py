@@ -7,7 +7,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt 
 
-log_path = './plot_log/dirichlet_log.txt'
+log_path = './plot_log_copy/dirichlet_log.txt'
 
 with open(log_path, 'r') as file:
     log_data = file.readlines()
@@ -79,8 +79,8 @@ plt.xlabel('Epoch')
 plt.ylabel('Cov mean')
 plt.title('Change of covariance')
 plt.plot(range(len(cov_mean_list)), cov_mean_list, linestyle='-', label='client set cov')
-plt.plot(range(len(test_svd_mean_list)), test_svd_mean_list, linestyle='-', label='test set cov')
-plt.plot(range(len(cov_mean_list)), cov_mean_list - test_svd_mean_list, linestyle='-', label='cov diff')
+plt.plot(range(len(test_svd_mean_list)), test_cov_mean_list, linestyle='-', label='test set cov')
+plt.plot(range(len(cov_mean_list)), cov_mean_list - test_cov_mean_list, linestyle='-', label='cov diff')
 plt.grid(True)
 plt.legend()
 plt.savefig('./graph_img/Covmean_ResNet18.png', dpi=300)

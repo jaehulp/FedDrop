@@ -27,11 +27,20 @@ cov_mean_list = []
 svd_mean_list = []
 topk_mean_list = []
 
+cov_std_list = []
+svd_std_list = []
+topk_std_list = []
+
 test_cov_mean_list = []
 test_svd_mean_list = []
 test_topk_mean_list = []
 
+disagreement_list = []
+
 context = False
+
+disagg = -1
+
 for line in log_data:
     line = line.strip()
 
@@ -64,6 +73,18 @@ for line in log_data:
     if line.startswith("Acc1 avg topk_svd_cov"):
         acc = float(re.search(r'Acc1 avg topk_svd_cov (\d+\.\d+)', line).group(1))
         acc1_avg_topk_svd.append(acc)
+    if disagg == 1:
+        matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
+        numbers = [float(m) for m in matches]
+        disagreement_list[-1] = torch.cat([disagreement_list[-1], torch.tensor([numbers[0]])])
+        disagg = -1
+
+    if line.startswith("disagreement tensor"):
+        matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
+        numbers = [float(m) for m in matches]
+        disagreement_list.append(torch.tensor(numbers))
+        disagg = 1
+    
 
     if context == 'clientset':
         if line.startswith("cov_mean_list"):
@@ -78,6 +99,10 @@ for line in log_data:
             matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
             numbers = [float(m) for m in matches]
             topk_mean_list.append(torch.tensor(numbers))
+        if line.startswith("cov_std_list"):
+            matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
+            numbers = [float(m) for m in matches]
+            cov_std_list.append(torch.tensor(numbers))
 
     if context == 'testset':
         if line.startswith("client_acc_list"):
@@ -97,8 +122,6 @@ for line in log_data:
             numbers = [float(m) for m in matches]
             test_topk_mean_list.append(torch.tensor(numbers))
 
-
-
 cov_mean_list = torch.stack(cov_mean_list)
 svd_mean_list = torch.stack(svd_mean_list)
 topk_mean_list = torch.stack(topk_mean_list)
@@ -115,23 +138,29 @@ test_cov_mean = torch.mean(test_cov_mean_list, dim=1)
 test_svd_mean = torch.mean(test_svd_mean_list, dim=1)
 test_topk_mean = torch.mean(test_topk_mean_list, dim=1)
 
-acc1_client_testset = torch.stack(acc1_client_testset)
-acc1_client_testset = acc1_client_testset - torch.mean(acc1_client_testset, dim=1, keepdim=True)
-
-cov_mean_index = torch.argsort(cov_mean_list, dim=1)
-sorted_acc1_client_testset= torch.gather(acc1_client_testset, dim=1, index=cov_mean_index)
+cov_index = torch.argsort(cov_mean_list, dim=1)
+sorted_cov_mean_list = torch.gather(cov_mean_list, dim=1, index=cov_index)
 
 plt.figure()
 plt.xlabel('Epoch')
-plt.ylabel('Centered Acc1')
+plt.ylabel('Mean Covariance')
 
-for i in [0, 5, 9]:
-    plt.plot(range(len(sorted_acc1_client_testset[:,0])), sorted_acc1_client_testset[:, i], linestyle='-', label=f'sorted {i}')
+for i in [0, 9]:
+    plt.plot(range(len(sorted_cov_mean_list[:,0])), sorted_cov_mean_list[:, i], linestyle='-', color='#1f77b4', linewidth=0.7, alpha=0.7)
+
+plt.plot(range(len(cov_mean)), cov_mean, linestyle='-', label='mean cov')
+std = torch.std(cov_mean_list, dim=1)
+plt.fill_between(range(len(cov_mean)), cov_mean - std, cov_mean + std, alpha=0.3)
 
 plt.grid(True)
 plt.legend()
-plt.savefig('./graph_img/CovArgsort_ClientTestsetAcc_ResNet18.png', dpi=300)
+plt.savefig('./graph_img/CovChange_ResNet18.png', dpi=300)
+plt.clf()
 
-print(torch.mean(sorted_acc1_client_testset[:, 0]))
-print(torch.mean(sorted_acc1_client_testset[:, 5]))
-print(torch.mean(sorted_acc1_client_testset[:, 9]))
+cov_std_list = torch.stack(cov_std_list)
+cov_std_mean = torch.mean(cov_std_list, dim=1)
+plt.xlabel('Epoch')
+plt.ylabel('Std Cov')
+plt.plot(range(len(cov_std_mean)), cov_std_mean, linestyle='-')
+plt.grid(True)
+plt.savefig('./graph_img/CovStd_ResNet18.png', dpi=300)

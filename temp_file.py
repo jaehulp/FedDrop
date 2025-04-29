@@ -14,6 +14,7 @@ with open(log_path, 'r') as file:
     log_data = file.readlines()
 
 acc1_default = []
+acc1_simple_avg = []
 acc1_drop_test_acc = []
 acc1_drop_cov_mean = []
 acc1_drop_svd_mean = []
@@ -28,6 +29,9 @@ for line in log_data:
     if line.startswith("Acc1 default test_acc"):
         acc = float(re.search(r'Acc1 default test_acc (\d+\.\d+)', line).group(1))
         acc1_default.append(acc)
+    if line.startswith("Acc1 simple avg test_acc"):
+        acc = float(re.search(r'Acc1 simple avg test_acc (\d+\.\d+)', line).group(1))
+        acc1_simple_avg.append(acc)
     if line.startswith("Acc1 drop least test_acc"):
         acc = float(re.search(r'Acc1 drop least test_acc (\d+\.\d+)', line).group(1))
         acc1_drop_test_acc.append(acc)
@@ -58,16 +62,7 @@ def minus_avg(list1, list2):
     return c.tolist(), d.item()
 
 
-diff, mean =minus_avg(acc1_avg_cov_mean[:50], acc1_default[:50])
-print(mean)
 diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
 print(mean)
-
-
-diff, mean = minus_avg(acc1_drop_cov_mean[:50], acc1_default[:50])
+diff, mean =minus_avg(acc1_simple_avg, acc1_default)
 print(mean)
-
-diff, mean = minus_avg(acc1_drop_cov_mean, acc1_default)
-print(mean)
-
-

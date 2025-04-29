@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 
-log_path = './plot_log/dirichlet_log.txt'
+log_path = './plot_log_copy/dirichlet_log.txt'
 
 with open(log_path, 'r') as file:
     log_data = file.readlines()
@@ -58,46 +58,80 @@ def minus_avg(list1, list2):
     return c.tolist(), d.item()
 
 
-
 plt.figure()
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy difference')
 plt.title(f'Acc diff between default merge & method')
 
-diff, mean = minus_avg(acc1_drop_test_acc, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='test_Acc')
-
 diff, mean = minus_avg(acc1_drop_cov_mean, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_cov')
-
-diff, mean = minus_avg(acc1_drop_svd_mean, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_svd')
-
-diff, mean = minus_avg(acc1_drop_topk_svd, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='drop_topk_svd')
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'drop_cov({mean:.4f})')
 
 plt.grid(True)
 plt.legend()
-plt.savefig(f'./graph_img/AccDiff_drop_ResNet18', dpi =300)
+plt.savefig(f'./graph_img/AccDiff_dropcov_ResNet18', dpi =300)
 plt.clf()
 
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy difference')
 plt.title(f'Acc diff between default merge & method')
 
-diff, mean = minus_avg(acc1_drop_test_acc, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='test_Acc')
-
-diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_cov')
-
-diff, mean =minus_avg(acc1_avg_svd_mean, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_svd')
-
-diff, mean =minus_avg(acc1_avg_topk_svd, acc1_default)
-plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label='avg_topk')
+diff, mean = minus_avg(acc1_drop_svd_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'drop_svd({mean:.4f})')
 
 plt.grid(True)
 plt.legend()
-plt.savefig(f'./graph_img/AccDiff_avg_ResNet18', dpi =300)
+plt.savefig(f'./graph_img/AccDiff_dropsvd_ResNet18', dpi =300)
+plt.clf()
+
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+diff, mean = minus_avg(acc1_drop_topk_svd, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'drop_topk_svd({mean:.4f})')
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_droptopk_ResNet18', dpi =300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+diff, mean = minus_avg(acc1_drop_test_acc, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'test_Acc({mean:.4f})')
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_dropTestAcc_ResNet18', dpi =300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+diff, mean =minus_avg(acc1_avg_cov_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'avg_cov({mean:.4f})')
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_avgcov_ResNet18', dpi =300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+diff, mean =minus_avg(acc1_avg_svd_mean, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'avg_svd({mean:.4f})')
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_avgsvd_ResNet18', dpi =300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy difference')
+plt.title(f'Acc diff between default merge & method')
+diff, mean =minus_avg(acc1_avg_topk_svd, acc1_default)
+plt.plot(range(len(diff)), diff, linewidth=1, linestyle='-', label=f'avg_topk({mean:.4f})')
+plt.grid(True)
+plt.legend()
+plt.savefig(f'./graph_img/AccDiff_avgtopk_ResNet18', dpi =300)
+plt.clf()
+
 

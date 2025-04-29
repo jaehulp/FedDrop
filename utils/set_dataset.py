@@ -109,31 +109,40 @@ def separate_dirichlet(xs, ys, num_classes, num_clients):
 
 def separate_shard(xs, ys, num_classes, num_clients):
     dataidx_map = {}
-
+    shard=200
     idxs = np.array(range(len(ys)))
     idx_for_each_class = []
 
     for i in range(num_classes):
         idx_for_each_class.append(idxs[ys == i])
-
-    class_num_per_client = [num_classes for _ in range(num_clients)]
-    for i in range(num_classes):
-
         np.random.shuffle(idx_for_each_class[i])
-           
-        num_per_client = int(len(idx_for_each_class[i]) / num_clients)
 
-        idx = 0
+    data_shard = list(range(int(len(ys)/shard)))
+    data_shard = np.array(data_shard)
 
-        for client in range(num_clients):
-            if client not in dataidx_map.keys():
-                dataidx_map[client] = idx_for_each_class[i][idx:idx+num_per_client]
-            else:
-                dataidx_map[client] = np.append(dataidx_map[client], idx_for_each_class[i][idx:idx+num_per_client], axis=0)
-            idx += num_per_client
+    num_shard_per_client = int(len(data_shard) / num_clients)
+    
+    for i in range(num_clients):
+        shard_idxs = np.random.choice(data_shard, num_shard_per_client, replace=False).tolist()
+        data_shard = [x for x in data_shard if x not in shard_idxs]
+        client_data = []
+        for j in shard_idxs:
+
+            shard_class = j % num_classes
+            shard_p = j // num_classes
+            data = idx_for_each_class[shard_class][(shard_p*shard):((shard_p+1)*shard)].tolist()
+            client_data = client_data + data
+        dataidx_map[i] = client_data
+    
+    # Check if assignment has overlap
+
+    check_idx = []
+    for i in range(num_clients):
+        check_idx += dataidx_map[i]
+    check_idx = np.unique(check_idx)
+    assert len(check_idx) == len(ys)
     
     return dataidx_map
-
 
 def separate_data(xs, ys, num_classes, num_clients, dist):
 

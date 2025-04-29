@@ -14,8 +14,8 @@ seed = 999
 np.random.seed(seed)
 random.seed(seed)
 num_clients = 50
-dist = 'dirichlet'
-dir_path = './data/generated_dataset/cifar10/dirichlet_50'
+dist = 'shard'
+dir_path = './data/generated_dataset/cifar10/shard_50'
 os.makedirs(dir_path, exist_ok=True)
 
 transform = transforms.Compose(
