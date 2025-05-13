@@ -8,6 +8,7 @@ from utils.dataset import read_client_data, get_client_transform
 from utils.loss import get_loss
 from utils.ops import accuracy, AverageMeter
 from utils.optimizer import load_optimizer
+from utils.sam import ASAM, SAM
 
 class Client(object):
 
@@ -71,6 +72,11 @@ class ClientAvg(Client):
         receive_model = copy.deepcopy(self.model)
         receive_model.to(self.device)
 
+        if self.args.sam.minimizer == 'sam':
+            minimizer = SAM(self.optimizer, self.model, self.args.sam.rho, self.args.sam.eta)
+        elif self.args.sam.minimizer == 'asam':
+            minimizer = ASAM(self.optimizer, self.model, self.args.sam.rho, self.args.sam.eta)
+
         for epoch in range(1, self.local_epochs+1):
             for i, (xs, ys) in enumerate(train_loader):
                 self.optimizer.zero_grad()
@@ -80,7 +86,14 @@ class ClientAvg(Client):
                 acc1, acc5 = accuracy(logits, ys, topk=(1,5))
                 loss = self.loss(logits, ys)
                 loss.backward()
-                self.optimizer.step()
+
+                if (self.args.sam.minimizer == 'sam') or (self.args.sam.minimizer == 'asam'):
+                    minimizer.ascent_step()
+                    loss.backward()
+                    minimizer.descent_step()
+                else:
+                    self.optimizer.step()
+
                 acc1_meter.update(acc1), acc5_meter.update(acc5), loss_meter.update(loss)
 
         self.train_result = [acc1_meter.result().detach().cpu().numpy(), acc5_meter.result().detach().cpu().numpy(), loss_meter.result().detach().cpu().numpy()]

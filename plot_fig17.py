@@ -1,11 +1,16 @@
 import os
 import re
-import yaml
-
+import sys
 import torch
+import logging
+import matplotlib.pyplot as plt
 import numpy as np
 
-import matplotlib.pyplot as plt 
+from utils.disagreement import *
+from utils.model import load_model
+from utils.ops import client_num_samples
+
+from dotmap import DotMap
 
 log_path = './plot_log/dirichlet_log.txt'
 
@@ -26,9 +31,6 @@ acc1_client_testset = []
 cov_mean_list = []
 svd_mean_list = []
 topk_mean_list = []
-
-cov_std_list = []
-svd_std_list = []
 
 test_cov_mean_list = []
 test_svd_mean_list = []
@@ -98,14 +100,6 @@ for line in log_data:
             matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
             numbers = [float(m) for m in matches]
             topk_mean_list.append(torch.tensor(numbers))
-        if line.startswith("cov_std_list"):
-            matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
-            numbers = [float(m) for m in matches]
-            cov_std_list.append(torch.tensor(numbers))
-        if line.startswith("svd_std_list"):
-            matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
-            numbers = [float(m) for m in matches]
-            svd_std_list.append(torch.tensor(numbers))
 
     if context == 'testset':
         if line.startswith("client_acc_list"):
@@ -125,42 +119,68 @@ for line in log_data:
             numbers = [float(m) for m in matches]
             test_topk_mean_list.append(torch.tensor(numbers))
 
-cov_mean_list = torch.stack(cov_mean_list)
-svd_mean_list = torch.stack(svd_mean_list)
-topk_mean_list = torch.stack(topk_mean_list)
 
-test_cov_mean_list = torch.stack(test_cov_mean_list)
-test_svd_mean_list = torch.stack(test_svd_mean_list)
-test_topk_mean_list = torch.stack(test_topk_mean_list)
+model_dir = './output/cifar10/resnet/dirichlet/client50/default'
+data_dir = './data/generated_dataset/cifar10/dirichlet_50'
+dataset_name = 'cifar10'
 
-cov_mean = torch.mean(cov_mean_list, dim=1)
-svd_mean = torch.mean(svd_mean_list, dim=1)
-topk_mean = torch.mean(topk_mean_list, dim=1)
+num_client = 50
+num_join_client = 10
+num_classes = 10
 
-test_cov_mean = torch.mean(test_cov_mean_list, dim=1)
-test_svd_mean = torch.mean(test_svd_mean_list, dim=1)
-test_topk_mean = torch.mean(test_topk_mean_list, dim=1)
+model_dict = {
+    'model_name': 'ResNet',
+    'block': 'BasicBlock',
+    'num_classes': num_classes,
+    'num_blocks': [2,2,2,2]
+}
 
-cov_std_list = torch.stack(cov_std_list)
+if dataset_name == 'cifar10':
+    testset = torchvision.datasets.CIFAR10(
+            root='./data/cifar10', train=False, download=True, transform=torchvision.transforms.ToTensor()
+    )
+    testloader = torch.utils.data.DataLoader(testset, 1000, shuffle=False)
 
-cov_std_list = cov_mean_list - 2*cov_std_list
-cov_std_rank = torch.argsort(cov_std_list, dim=1, descending=True)
+log_dir = './plot_log'
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.FileHandler(os.path.join(log_dir, 'raw_penult_output.txt'), mode='w'))
+logger.addHandler(logging.StreamHandler(sys.stdout))
+
+model_dict = DotMap(model_dict)
+model = load_model(model_dict)
+
+num_samples = client_num_samples(data_dir, num_client, num_classes)
+cov_pruning_list = []
+for i in range(2, 301):
+    epoch = i
+    logger.info(f'Epoch {i}')
+    model_list, idx_list = return_client_model_list(epoch, num_client, num_join_client, model_dir)
+    cov_pruning = measure_client_pruning_cov(epoch, model_dir, data_dir, model_dict, model_list, idx_list)
+    logger.info(f'Pruing cov mean {cov_pruning}')
+    cov_pruning_list.append(torch.tensor(cov_pruning))
+
+cov_pruning_list = torch.stack(cov_pruning_list)
+cov_mean_index = torch.argsort(cov_pruning_list, dim=1)
 acc1_client_testset = torch.stack(acc1_client_testset)
-acc1_client_rank = torch.argsort(acc1_client_testset, dim=1, descending=True)
+acc1_client_testset = acc1_client_testset - torch.mean(acc1_client_testset, dim=1, keepdim=True)
+sorted_acc1_client_testset= torch.gather(acc1_client_testset, dim=1, index=cov_mean_index)
 
-cov_std_rank = cov_std_rank * 10
-rank = cov_std_rank + acc1_client_rank
-bincount = torch.bincount(rank.flatten())
-assert len(bincount) == 100
+plt.figure()
+plt.xlabel('Epoch')
+plt.ylabel('Centered Acc1')
 
-bincount = bincount.reshape(10,10)
-bincount = bincount / 2990
-plt.imshow(bincount, cmap = 'inferno', vmin=0, vmax= 0.03)
-plt.colorbar()
-plt.xlabel('Test acc1 rank')
-plt.ylabel('Covariance rank')
-plt.title('Client Test acc1 vs Covariance')
-plt.savefig('./graph_img/CovstdAccRank_heatmap_ResNet18.png', dpi=300)
+for i in [0, 5, 9]:
+    plt.plot(range(len(sorted_acc1_client_testset[:, 0])), sorted_acc1_client_testset[:, i], linestyle='-', label=f'sorted {i}({torch.mean(sorted_acc1_client_testset[:,i]):.4f})')
+
+min_list = torch.amin(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), min_list, linestyle='-', label=f'Min Acc1({torch.mean(min_list):.4f})')
+max_list = torch.amax(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), max_list, linestyle='-', label=f'Max Acc1({torch.mean(max_list):.4f})')
+
+plt.grid(True)
+plt.legend()
+plt.title('Argsort Client Test Acc with testset covariance')
+plt.savefig('./graph_img/CovPruningArgsort_ClientTestsetAcc_ResNet18.png', dpi=300)
 plt.clf()
-
-

@@ -38,10 +38,10 @@ def batched_angle_between(A, B, eps=1e-8):
     return angles_rad  # optional: .unsqueeze(1) if you want shape (N, 1)
 
 def compute_cov_mean(server_output, client_output):
-    server_mean = torch.mean(server_output, dim=0, keepdim=True)
+    server_mean = torch.mean(server_output, dim=1, keepdim=True)
     server_output = server_output - server_mean
 
-    client_mean = torch.mean(client_output, dim=0, keepdim=True)
+    client_mean = torch.mean(client_output, dim=1, keepdim=True)
     client_output = client_output - client_mean
 
     U, S, Vt_s = torch.linalg.svd(server_output)
@@ -249,3 +249,330 @@ def simple_model_aggregate(model, model_list, w, dataloader):
         acc1_meter.update(acc1)
 
     return acc1_meter.result()
+
+
+from utils.ops import features, accuracy, AverageMeter
+
+def measure_client_raw_cov(epoch, model_dir, data_dir, model_args, model_list, idx_list):
+
+    server_model = load_model(model_args)
+    server_state_dict = torch.load(os.path.join(model_dir, f'epoch_{epoch-1}.pt'))
+    server_model.load_state_dict(server_state_dict)
+    server_hook = server_model.fc.register_forward_hook(hook)
+    server_model.cuda()
+
+    client_model = load_model(model_args)
+    client_model.cuda()
+    
+    server_acc_list = []
+    client_acc_list = []
+    acc1_meter = AverageMeter()
+
+    cov_list = []
+
+    for m, idx in zip(model_list, idx_list):
+        data = read_client_data(data_dir, idx)
+        dataloader = torch.utils.data.DataLoader(data, 500, shuffle=False)
+        
+        acc1_meter.reset()
+        server_output = []
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = server_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            server_output.append(hook_data)
+        server_acc_list.append(acc1_meter.result().item())
+
+        client_model.load_state_dict(m)
+        acc1_meter.reset()
+        client_output = []
+        client_hook = client_model.fc.register_forward_hook(hook)
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = client_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            client_output.append(hook_data)
+        client_hook.remove()
+        client_acc_list.append(acc1_meter.result().item())
+
+        server_output = torch.cat(server_output)
+        client_output = torch.cat(client_output)
+
+        server_mean = torch.mean(server_output, dim=0, keepdim=True)
+        server_output = server_output - server_mean
+
+        client_mean = torch.mean(client_output, dim=0, keepdim=True)
+        client_output = client_output - client_mean
+
+        output_mat = torch.stack([server_output, client_output])
+        mean = torch.mean(output_mat, dim=1, keepdim=True)
+        std = torch.std(output_mat, dim=1, keepdim=True)
+
+        output_normalized = (output_mat - mean) / (std + 1e-16)
+        output_reshape = output_normalized.permute(0, 2, 1)  # Shape (M, K, N)
+        cov_matrix = torch.einsum('mkn,pqn->mpkq', output_reshape, output_reshape) / output_mat.shape[1]  # Shape (M, M, K, K)
+        cov_val = cov_matrix[0, 1, :, :]
+
+        cov_val = torch.diagonal(cov_val)
+
+        cov_list.append(cov_val.tolist())
+
+    return cov_list
+
+
+def measure_client_raw_svd(epoch, model_dir, data_dir, model_args, model_list, idx_list):
+
+    server_model = load_model(model_args)
+    server_state_dict = torch.load(os.path.join(model_dir, f'epoch_{epoch-1}.pt'))
+    server_model.load_state_dict(server_state_dict)
+    server_hook = server_model.fc.register_forward_hook(hook)
+    server_model.cuda()
+
+    client_model = load_model(model_args)
+    client_model.cuda()
+    
+    server_acc_list = []
+    client_acc_list = []
+    acc1_meter = AverageMeter()
+
+    cov_list = []
+    server_singular = []
+    client_singular = []
+    singular_diff = []
+
+    for m, idx in zip(model_list, idx_list):
+        data = read_client_data(data_dir, idx)
+        dataloader = torch.utils.data.DataLoader(data, 500, shuffle=False)
+        
+        acc1_meter.reset()
+        server_output = []
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = server_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            server_output.append(hook_data)
+        server_acc_list.append(acc1_meter.result().item())
+
+        client_model.load_state_dict(m)
+        acc1_meter.reset()
+        client_output = []
+        client_hook = client_model.fc.register_forward_hook(hook)
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = client_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            client_output.append(hook_data)
+        client_hook.remove()
+        client_acc_list.append(acc1_meter.result().item())
+
+        server_output = torch.cat(server_output)
+        client_output = torch.cat(client_output)
+
+        server_mean = torch.mean(server_output, dim=1, keepdim=True)
+        server_output = server_output - server_mean
+
+        client_mean = torch.mean(client_output, dim=1, keepdim=True)
+        client_output = client_output - client_mean
+
+        _, S_s,  Vt_s = torch.linalg.svd(server_output)
+        svd_server_output = (Vt_s[:50] @ server_output.permute(1,0)).T
+        _, S_c,  Vt_c = torch.linalg.svd(client_output)
+
+        svd_client_output = (Vt_c[:50] @ client_output.permute(1,0)).T
+
+        output_mat = torch.stack([svd_server_output, svd_client_output])
+        mean = torch.mean(output_mat, dim=1, keepdim=True)
+        std = torch.std(output_mat, dim=1, keepdim=True)
+
+        output_normalized = (output_mat - mean) / (std + 1e-16)
+        output_reshape = output_normalized.permute(0, 2, 1)  # Shape (M, K, N)
+        cov_matrix = torch.einsum('mkn,pqn->mpkq', output_reshape, output_reshape) / output_mat.shape[1]  # Shape (M, M, K, K)
+        cov_val = cov_matrix[0, 1, :, :]
+
+        cov_val = torch.diagonal(cov_val)
+        cov_val = abs(cov_val)
+
+        server_singular.append(S_s[:50].tolist())
+        client_singular.append(S_c[:50].tolist())
+        singular_diff.append((S_s - S_c)[:50].tolist())
+
+        cov_list.append(cov_val.tolist())
+
+    return cov_list, server_singular, client_singular, singular_diff
+
+
+def measure_client_pruning_cov(epoch, model_dir, data_dir, model_args, model_list, idx_list):
+
+    server_model = load_model(model_args)
+    server_state_dict = torch.load(os.path.join(model_dir, f'epoch_{epoch-1}.pt'))
+    server_model.load_state_dict(server_state_dict)
+    server_hook = server_model.fc.register_forward_hook(hook)
+    server_model.cuda()
+
+    client_model = load_model(model_args)
+    client_model.cuda()
+    
+    server_acc_list = []
+    client_acc_list = []
+    acc1_meter = AverageMeter()
+
+    cov_list = []
+
+    for m, idx in zip(model_list, idx_list):
+        data = read_client_data(data_dir, idx)
+        dataloader = torch.utils.data.DataLoader(data, 500, shuffle=False)
+        
+        acc1_meter.reset()
+        server_output = []
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = server_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            server_output.append(hook_data)
+        server_acc_list.append(acc1_meter.result().item())
+
+        client_model.load_state_dict(m)
+        acc1_meter.reset()
+        client_output = []
+        client_hook = client_model.fc.register_forward_hook(hook)
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = client_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            client_output.append(hook_data)
+        client_hook.remove()
+        client_acc_list.append(acc1_meter.result().item())
+
+        server_output = torch.cat(server_output)
+        client_output = torch.cat(client_output)
+
+        server_mean = torch.mean(server_output, dim=1, keepdim=True)
+        server_output = server_output - server_mean
+
+        client_mean = torch.mean(client_output, dim=1, keepdim=True)
+        client_output = client_output - client_mean
+
+        output_mat = torch.stack([server_output, client_output])
+        mean = torch.mean(output_mat, dim=1, keepdim=True)
+        std = torch.std(output_mat, dim=1, keepdim=True)
+
+        output_normalized = (output_mat - mean) / (std + 1e-16)
+        output_reshape = output_normalized.permute(0, 2, 1)  # Shape (M, K, N)
+        cov_matrix = torch.einsum('mkn,pqn->mpkq', output_reshape, output_reshape) / output_mat.shape[1]  # Shape (M, M, K, K)
+        cov_val = cov_matrix[0, 1, :, :]
+
+        cov_val = torch.diagonal(cov_val)
+        params = copy.deepcopy(list(server_model.fc.parameters())[0])
+        p_sum = torch.mean(params, dim=0)
+        p_sum = abs(p_sum)
+        _, param_index = torch.sort(p_sum, descending=True)
+        cov_val = cov_val[param_index][:100]
+        cov_mean = torch.mean(cov_val)
+        cov_list.append(cov_mean.item())
+
+    return cov_list
+
+
+def measure_client_raw_svd_block3(epoch, model_dir, data_dir, model_args, model_list, idx_list):
+
+    server_model = load_model(model_args)
+    server_state_dict = torch.load(os.path.join(model_dir, f'epoch_{epoch-1}.pt'))
+    server_model.load_state_dict(server_state_dict)
+    server_hook = server_model.conv4_x.register_forward_hook(hook)
+    server_model.cuda()
+
+    client_model = load_model(model_args)
+    client_model.cuda()
+    
+    server_acc_list = []
+    client_acc_list = []
+    acc1_meter = AverageMeter()
+
+    cov_list = []
+    server_singular = []
+    client_singular = []
+    singular_diff = []
+
+    for m, idx in zip(model_list, idx_list):
+        data = read_client_data(data_dir, idx)
+        dataloader = torch.utils.data.DataLoader(data, 500, shuffle=False)
+        
+        acc1_meter.reset()
+        server_output = []
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = server_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            server_output.append(hook_data)
+        server_acc_list.append(acc1_meter.result().item())
+
+        client_model.load_state_dict(m)
+        acc1_meter.reset()
+        client_output = []
+        client_hook = client_model.conv5_x.register_forward_hook(hook)
+        for i, (xs, ys) in enumerate(dataloader):
+            xs = xs.cuda()
+            ys = ys.cuda()
+            logits = client_model(xs)
+            acc1, _ = accuracy(logits, ys, topk=(1,5))
+            acc1_meter.update(acc1)
+            hook_data = features.value.data.view(xs.shape[0], -1).cuda()
+            client_output.append(hook_data)
+        client_hook.remove()
+        client_acc_list.append(acc1_meter.result().item())
+
+        server_output = torch.cat(server_output)
+        client_output = torch.cat(client_output)
+
+        server_mean = torch.mean(server_output, dim=1, keepdim=True)
+        server_output = server_output - server_mean
+
+        client_mean = torch.mean(client_output, dim=1, keepdim=True)
+        client_output = client_output - client_mean
+
+        _, S_s,  Vt_s = torch.linalg.svd(server_output)
+        svd_server_output = (Vt_s[:50] @ server_output.permute(1,0)).T
+        _, S_c,  Vt_c = torch.linalg.svd(client_output)
+
+        svd_client_output = (Vt_c[:50] @ client_output.permute(1,0)).T
+
+        output_mat = torch.stack([svd_server_output, svd_client_output])
+        mean = torch.mean(output_mat, dim=1, keepdim=True)
+        std = torch.std(output_mat, dim=1, keepdim=True)
+
+        output_normalized = (output_mat - mean) / (std + 1e-16)
+        output_reshape = output_normalized.permute(0, 2, 1)  # Shape (M, K, N)
+        cov_matrix = torch.einsum('mkn,pqn->mpkq', output_reshape, output_reshape) / output_mat.shape[1]  # Shape (M, M, K, K)
+        cov_val = cov_matrix[0, 1, :, :]
+
+        cov_val = torch.diagonal(cov_val)
+        cov_val = abs(cov_val)
+
+        server_singular.append(S_s[:50].tolist())
+        client_singular.append(S_c[:50].tolist())
+        singular_diff.append((S_s - S_c)[:50].tolist())
+
+        cov_list.append(cov_val.tolist())
+
+    return cov_list, server_singular, client_singular, singular_diff

@@ -27,19 +27,15 @@ cov_mean_list = []
 svd_mean_list = []
 topk_mean_list = []
 
-cov_std_list = []
-svd_std_list = []
-
 test_cov_mean_list = []
 test_svd_mean_list = []
 test_topk_mean_list = []
 
 disagreement_list = []
 
-context = False
-
 disagg = -1
 
+context = False
 for line in log_data:
     line = line.strip()
 
@@ -72,6 +68,7 @@ for line in log_data:
     if line.startswith("Acc1 avg topk_svd_cov"):
         acc = float(re.search(r'Acc1 avg topk_svd_cov (\d+\.\d+)', line).group(1))
         acc1_avg_topk_svd.append(acc)
+
     if disagg == 1:
         matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
         numbers = [float(m) for m in matches]
@@ -83,7 +80,6 @@ for line in log_data:
         numbers = [float(m) for m in matches]
         disagreement_list.append(torch.tensor(numbers))
         disagg = 1
-    
 
     if context == 'clientset':
         if line.startswith("cov_mean_list"):
@@ -98,14 +94,6 @@ for line in log_data:
             matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
             numbers = [float(m) for m in matches]
             topk_mean_list.append(torch.tensor(numbers))
-        if line.startswith("cov_std_list"):
-            matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
-            numbers = [float(m) for m in matches]
-            cov_std_list.append(torch.tensor(numbers))
-        if line.startswith("svd_std_list"):
-            matches = re.findall(r"[-+]?\d*\.\d+|\d+", line)
-            numbers = [float(m) for m in matches]
-            svd_std_list.append(torch.tensor(numbers))
 
     if context == 'testset':
         if line.startswith("client_acc_list"):
@@ -125,6 +113,8 @@ for line in log_data:
             numbers = [float(m) for m in matches]
             test_topk_mean_list.append(torch.tensor(numbers))
 
+
+
 cov_mean_list = torch.stack(cov_mean_list)
 svd_mean_list = torch.stack(svd_mean_list)
 topk_mean_list = torch.stack(topk_mean_list)
@@ -141,26 +131,87 @@ test_cov_mean = torch.mean(test_cov_mean_list, dim=1)
 test_svd_mean = torch.mean(test_svd_mean_list, dim=1)
 test_topk_mean = torch.mean(test_topk_mean_list, dim=1)
 
-cov_std_list = torch.stack(cov_std_list)
-
-cov_std_list = cov_mean_list - 2*cov_std_list
-cov_std_rank = torch.argsort(cov_std_list, dim=1, descending=True)
 acc1_client_testset = torch.stack(acc1_client_testset)
-acc1_client_rank = torch.argsort(acc1_client_testset, dim=1, descending=True)
+acc1_client_testset = acc1_client_testset - torch.mean(acc1_client_testset, dim=1, keepdim=True)
 
-cov_std_rank = cov_std_rank * 10
-rank = cov_std_rank + acc1_client_rank
-bincount = torch.bincount(rank.flatten())
-assert len(bincount) == 100
+cov_mean_index = torch.argsort(cov_mean_list, dim=1)
+sorted_acc1_client_testset= torch.gather(acc1_client_testset, dim=1, index=cov_mean_index)
 
-bincount = bincount.reshape(10,10)
-bincount = bincount / 2990
-plt.imshow(bincount, cmap = 'inferno', vmin=0, vmax= 0.03)
-plt.colorbar()
-plt.xlabel('Test acc1 rank')
-plt.ylabel('Covariance rank')
-plt.title('Client Test acc1 vs Covariance')
-plt.savefig('./graph_img/CovstdAccRank_heatmap_ResNet18.png', dpi=300)
+plt.figure()
+plt.xlabel('Epoch')
+plt.ylabel('Centered Acc1')
+
+for i in [0, 5, 9]:
+    plt.plot(range(len(sorted_acc1_client_testset[:, 0])), sorted_acc1_client_testset[:, i], linestyle='-', label=f'sorted {i}({torch.mean(sorted_acc1_client_testset[:,i]):.4f})')
+
+min_list = torch.amin(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), min_list, linestyle='-', label=f'Min Acc1({torch.mean(min_list):.4f})')
+max_list = torch.amax(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), max_list, linestyle='-', label=f'Max Acc1({torch.mean(max_list):.4f})')
+
+plt.grid(True)
+plt.legend()
+plt.title('Argsort Client Test Acc with testset covariance')
+plt.savefig('./graph_img/CovArgsort_ClientTestsetAcc_ResNet18.png', dpi=300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Centered Disagreement')
+
+disagreement_mat = torch.stack(disagreement_list)
+disagreement = torch.mean(disagreement_mat, dim=1, keepdim=True)
+disagreement_mat = disagreement_mat - disagreement
+sorted_disagreement_mat = torch.gather(disagreement_mat, dim=1, index=cov_mean_index)
+
+for i in [0, 5, 9]:
+    plt.plot(range(len(sorted_disagreement_mat[:, 0])), sorted_disagreement_mat[:, i], linestyle='-', label=f'sorted {i}({torch.mean(sorted_disagreement_mat[:,i]):.4f})')
+
+min_list = torch.amin(disagreement_mat, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), min_list, linestyle='-', label=f'Min disagg({torch.mean(min_list):.4f})')
+max_list = torch.amax(disagreement_mat, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), max_list, linestyle='-', label=f'Max disagg({torch.mean(max_list):.4f})')
+
+plt.grid(True)
+plt.legend()
+plt.title('Argsort Client Disagreement with testset SVD cov')
+plt.savefig('./graph_img/CovArgsort_ClientDisagreement_ResNet18.png', dpi=300)
 plt.clf()
 
 
+svd_mean_index = torch.argsort(svd_mean_list, dim=1)
+sorted_acc1_client_testset= torch.gather(acc1_client_testset, dim=1, index=svd_mean_index)
+sorted_disagreement_mat = torch.gather(disagreement_mat, dim=1, index=svd_mean_index)
+
+
+plt.xlabel('Epoch')
+plt.ylabel('Centered Acc1')
+
+for i in [0, 5, 9]:
+    plt.plot(range(len(sorted_acc1_client_testset[:, 0])), sorted_acc1_client_testset[:, i], linestyle='-', label=f'sorted {i}({torch.mean(sorted_acc1_client_testset[:,i]):.4f})')
+
+min_list = torch.amin(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), min_list, linestyle='-', label=f'Min Acc1({torch.mean(min_list):.4f})')
+max_list = torch.amax(acc1_client_testset, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), max_list, linestyle='-', label=f'Max Acc1({torch.mean(max_list):.4f})')
+
+plt.grid(True)
+plt.legend()
+plt.title('Argsort Client Test Acc with testset covariance')
+plt.savefig('./graph_img/SvdArgsort_ClientTestsetAcc_ResNet18.png', dpi=300)
+plt.clf()
+
+plt.xlabel('Epoch')
+plt.ylabel('Centered Disagreement')
+
+for i in [0, 5, 9]:
+    plt.plot(range(len(sorted_disagreement_mat[:, 0])), sorted_disagreement_mat[:, i], linestyle='-', label=f'sorted {i}({torch.mean(sorted_disagreement_mat[:,i]):.4f})')
+
+min_list = torch.amin(disagreement_mat, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), min_list, linestyle='-', label=f'Min disagg({torch.mean(min_list):.4f})')
+max_list = torch.amax(disagreement_mat, dim=1)
+plt.plot(range(len(sorted_acc1_client_testset[:, 0])), max_list, linestyle='-', label=f'Max disagg({torch.mean(max_list):.4f})')
+
+plt.grid(True)
+plt.legend()
+plt.title('Argsort Client Disagreement with testset SVD cov')
+plt.savefig('./graph_img/SvdArgsort_ClientDisagreement_ResNet18.png', dpi=300)

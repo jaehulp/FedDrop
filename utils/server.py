@@ -127,11 +127,11 @@ class Server(object):
             client_handle.remove()
 
             global_output = torch.cat(global_output)
-            global_mean = torch.mean(global_output, dim=0, keepdim=True)
+            global_mean = torch.mean(global_output, dim=1, keepdim=True)
             global_output = global_output - global_mean
 
             client_output = torch.cat(client_output)
-            client_mean = torch.mean(client_output, dim=0, keepdim=True)
+            client_mean = torch.mean(client_output, dim=1, keepdim=True)
             client_output = client_output - client_mean
 
             if self.args_server.svd_proj == True:

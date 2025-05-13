@@ -1,21 +1,20 @@
+import os
+import torchvision
+import torch
+import json
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Example data
-x = np.linspace(0, 10, 100)
-y_mean = np.sin(x)
-y_std = 0.2 + 0.2 * np.abs(np.cos(x))  # Example: std changes with x
+from utils.dataset import read_client_data
 
-# Plot mean line
-plt.plot(x, y_mean, label='Mean')
+path = './data/generated_dataset/cifar10/dirichlet_50/config.json'
+with open(path) as jsonfile:
+    data = json.load(jsonfile)
 
-# Fill between (mean-std) and (mean+std)
-plt.fill_between(x, y_mean - y_std, y_mean + y_std, alpha=0.3, label='Std Dev')
 
-# Add labels and legend
-plt.title('Line Plot with Std Deviation Shading')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.legend()
+datalist = data['Size of samples for labels in clients']
+arr = np.zeros(shape=(50, 10))
+for i, c in enumerate(datalist):
+    for e in c:
+        arr[i, e[0]] = e[1]
 
-plt.savefig('./shit.png')
+print(arr[9])

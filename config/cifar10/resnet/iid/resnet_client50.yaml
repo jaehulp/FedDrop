@@ -1,0 +1,30 @@
+output_dir: ./output/cifar10/resnet/iid/client50/default
+datapath: ./data/generated_dataset/cifar10/iid_50
+seed: 999
+save_interval: 1
+model:
+  model_name: ResNet
+  block: BasicBlock
+  num_classes: 10
+  num_blocks: [2,2,2,2]  
+server:
+  num_clients: 50
+  num_join_clients: 10
+  epochs: 300
+  batch_size: 1024
+  aggregate_cov: False
+  svd_proj: False
+client:
+  batch_size : 64
+  local_epochs: 10
+  loss:
+    loss_name: CrossEntropyLoss
+    label_smoothing: 0
+  save_client: True
+  optimizer:
+    optimizer_name: SGD
+    lr: 0.01
+    weight_decay: 0.0005
+    momentum: 0.9
+  transform:
+    use_transform: False

@@ -37,7 +37,7 @@ log_dir = './plot_log'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.FileHandler(os.path.join(log_dir, 'dirichlet_log.txt'), mode='w'))
+logger.addHandler(logging.FileHandler(os.path.join(log_dir, 'dirichlet_log_featuredimmean.txt'), mode='w'))
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 model_dict = DotMap(model_dict)
@@ -75,7 +75,6 @@ for i in range(2, 301):
     idx = list(range(10))
     norm_weight = weight[idx]
     norm_weight = norm_weight / sum(norm_weight)
-    new_list = [model_list[i] for i in idx]
     acc1 = simple_model_aggregate(model, [model_list[i] for i in idx], norm_weight, testloader)
     logger.info(f'Acc1 default test_acc {acc1}')
 
@@ -87,7 +86,6 @@ for i in range(2, 301):
     idx = idx[2:]
     norm_weight = weight[idx]
     norm_weight = norm_weight / sum(norm_weight)
-    new_list = [model_list[i] for i in idx]
     acc1 = simple_model_aggregate(model, [model_list[i] for i in idx], norm_weight, testloader)
     logger.info(f'Acc1 drop least test_acc {acc1}')
 
