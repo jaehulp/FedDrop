@@ -86,3 +86,20 @@ def client_num_samples(data_dir, num_client, num_classes):
     return np.sum(arr, axis=1)
     
 
+def generate_confusion_matrix(model, test_loader, num_classes, device='cuda'):
+    model.to(device)
+    model.eval()
+    confusion = np.zeros((num_classes, num_classes), dtype=np.int64)
+
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+            preds = torch.argmax(outputs, dim=1)
+
+            for t, p in zip(labels.view(-1), preds.view(-1)):
+                confusion[t.long(), p.long()] += 1
+
+    return confusion

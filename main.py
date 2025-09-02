@@ -12,7 +12,7 @@ import numpy as np
 
 from dotmap import DotMap
 
-from utils.server import FedAvg
+from utils.fed.server import set_server
 from torch.utils.tensorboard import SummaryWriter
 
 def main(args):
@@ -27,7 +27,8 @@ def main(args):
 
     writer = SummaryWriter(os.path.join(output_dir, 'tensorboard'))
 
-    FLServer = FedAvg(args, logger=logger, writer=writer)
+    ServerBase = set_server(args.server.base)
+    FLServer = ServerBase(args, logger=logger, writer=writer)
     FLServer.train()
 
 if __name__ == '__main__':
@@ -49,6 +50,9 @@ if __name__ == '__main__':
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed(args.seed)
+
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     main(args)
 

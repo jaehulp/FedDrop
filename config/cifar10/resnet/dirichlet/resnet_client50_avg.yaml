@@ -1,4 +1,4 @@
-output_dir: ./output/cifar10/resnet/dirichlet/client50/cov_avg
+output_dir: ./output/cifar10/resnet/dirichlet/client50/covavg
 datapath: ./data/generated_dataset/cifar10/dirichlet_50
 seed: 111
 save_interval: 1
@@ -8,14 +8,15 @@ model:
   num_classes: 10
   num_blocks: [2,2,2,2]  
 server:
+  base: covavg
   num_clients: 50
   num_join_clients: 10
   epochs: 300
   batch_size: 1024
-  aggregate_cov: avg
+  aggregate_cov: True
   svd_proj: False
-  avg_temp: 3
 client:
+  base: avg
   batch_size : 64
   local_epochs: 10
   loss:

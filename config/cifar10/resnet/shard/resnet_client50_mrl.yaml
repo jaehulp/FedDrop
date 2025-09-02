@@ -1,11 +1,11 @@
-output_dir: ./output/cifar10/resnet/dirichlet/client50/default
-datapath: ./data/generated_dataset/cifar10/dirichlet_50
+output_dir: ./output/cifar10/resnet/shard/client50/test
+datapath: ./data/generated_dataset/cifar10/shard_50
 seed: 111
 save_interval: 1
 model:
   model_name: ResNet
   block: BasicBlock
-  num_classes: 100
+  num_classes: 10
   num_blocks: [2,2,2,2]  
 server:
   base: avg
@@ -13,8 +13,13 @@ server:
   num_join_clients: 10
   epochs: 300
   batch_size: 1024
+  aggregate_cov: False
+  svd_proj: False
 client:
-  base: avg
+  base: mrl
+  prefix: True
+  topk: 100
+  alpha: 0.5
   batch_size : 64
   local_epochs: 10
   loss:

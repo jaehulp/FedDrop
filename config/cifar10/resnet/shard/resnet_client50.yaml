@@ -1,4 +1,4 @@
-output_dir: ./output/cifar10/resnet/shard/client50/default
+output_dir: ./output/cifar10/resnet/shard/client50/test
 datapath: ./data/generated_dataset/cifar10/shard_50
 seed: 111
 save_interval: 1
@@ -8,6 +8,7 @@ model:
   num_classes: 10
   num_blocks: [2,2,2,2]  
 server:
+  base: avg
   num_clients: 50
   num_join_clients: 10
   epochs: 300
@@ -15,6 +16,7 @@ server:
   aggregate_cov: False
   svd_proj: False
 client:
+  base: avg
   batch_size : 64
   local_epochs: 10
   loss:

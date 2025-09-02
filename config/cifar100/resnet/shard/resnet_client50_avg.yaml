@@ -1,5 +1,5 @@
-output_dir: ./output/cifar10/resnet/dirichlet/client50/default
-datapath: ./data/generated_dataset/cifar10/dirichlet_50
+output_dir: ./output/cifar100/resnet/shard/client50/avg
+datapath: ./data/generated_dataset/cifar100/shard_50
 seed: 111
 save_interval: 1
 model:
@@ -8,13 +8,14 @@ model:
   num_classes: 100
   num_blocks: [2,2,2,2]  
 server:
-  base: avg
   num_clients: 50
   num_join_clients: 10
   epochs: 300
   batch_size: 1024
+  aggregate_cov: avg
+  svd_proj: False
+  avg_temp: 3
 client:
-  base: avg
   batch_size : 64
   local_epochs: 10
   loss:
