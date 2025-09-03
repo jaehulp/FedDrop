@@ -55,7 +55,7 @@ def parser(log_path, train_dict, test_dict):
             extracter(line, train_dict)
         elif last_context == 'test':
             extracter(line, test_dict)
-save_dir = './graph_img3/'
+save_dir = './graph_img/'
 
 log_path = './output/cifar10/resnet/dirichlet/client50/default/log.txt'
 train_dict = dict_object('train')
@@ -85,6 +85,23 @@ namespace = {
     'ylabel': 'Acc1 accuracy',
     'yaxis': test_dict.values['Acc1'],
     'label': 'mrl'}
+
+draw_graph(namespace)
+
+
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_prefix/log.txt'
+train_dict = dict_object('train')
+test_dict = dict_object('test')
+parser(log_path, train_dict, test_dict)
+
+namespace = {
+    'xlabel': 'Epochs',
+    'xaxis': test_dict.values['Epochs'],
+    'ylabel': 'Acc1 accuracy',
+    'yaxis': test_dict.values['Acc1'],
+    'label': 'mrl_prefix'}
+
+draw_graph(namespace)
 
 plt.title('Acc1-CIFAR10-ResNet18-dirichlet50')
 save_path = os.path.join(save_dir, 'acc1_cifar10_resnet18_dirichlet50_default.png')

@@ -14,7 +14,9 @@ server:
   epochs: 300
   batch_size: 1024
 client:
-  base: avg
+  base: mrl
+  topk: 64
+  alpha: 0.5
   prefix: False
   batch_size : 64
   local_epochs: 10
