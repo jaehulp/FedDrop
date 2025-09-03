@@ -1,0 +1,33 @@
+output_dir: ./output/cifar10/resnet/dirichlet/client50/mrl_alpha08
+datapath: ./data/generated_dataset/cifar10/dirichlet_50
+seed: 111
+save_interval: 1
+model:
+  model_name: ResNet
+  block: BasicBlock
+  num_classes: 100
+  num_blocks: [2,2,2,2]  
+server:
+  base: avg
+  num_clients: 50
+  num_join_clients: 10
+  epochs: 300
+  batch_size: 1024
+client:
+  base: mrl
+  topk: 128
+  alpha: 0.8
+  prefix: False
+  batch_size : 64
+  local_epochs: 10
+  loss:
+    loss_name: CrossEntropyLoss
+    label_smoothing: 0
+  save_client: True
+  optimizer:
+    optimizer_name: SGD
+    lr: 0.01
+    weight_decay: 0.0005
+    momentum: 0.9
+  transform:
+    use_transform: False
