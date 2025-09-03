@@ -85,7 +85,7 @@ def separate_noniid(xs, ys, num_classes, num_clients):
     return dataidx_map
 
 
-def separate_dirichlet(xs, ys, num_classes, num_clients):
+def separate_dirichlet(xs, ys, num_classes, num_clients, alpha):
 
     dataidx_map = {}
 
@@ -96,7 +96,7 @@ def separate_dirichlet(xs, ys, num_classes, num_clients):
     for i in range(num_classes):
         idx_k = np.where(ys == i)[0]
         np.random.shuffle(idx_k)
-        proportions = np.random.dirichlet(np.repeat(0.5, num_clients))
+        proportions = np.random.dirichlet(np.repeat(alpha, num_clients))
         proportions = np.array([p*(len(idx_j)<N/num_clients) for p,idx_j in zip(proportions,idx_batch)])
         proportions = proportions/proportions.sum()
         proportions = (np.cumsum(proportions)*len(idx_k)).astype(int)[:-1]
@@ -144,14 +144,14 @@ def separate_shard(xs, ys, num_classes, num_clients):
     
     return dataidx_map
 
-def separate_data(xs, ys, num_classes, num_clients, dist):
+def separate_data(xs, ys, num_classes, num_clients, dist, alpha):
 
     if dist == 'iid':
         dataidx_map = separate_iid(xs, ys, num_classes, num_clients)
     elif dist == 'non_iid':
         dataidx_map = separate_noniid(xs, ys, num_classes, num_clients)
     elif dist == 'dirichlet':
-        dataidx_map = separate_dirichlet(xs, ys, num_classes, num_clients)
+        dataidx_map = separate_dirichlet(xs, ys, num_classes, num_clients, alpha)
     elif dist == 'shard':
         dataidx_map = separate_shard(xs, ys, num_classes, num_clients)
     else:

@@ -89,6 +89,7 @@ namespace = {
 draw_graph(namespace)
 
 
+
 log_path = './output/cifar10/resnet/dirichlet/client50/mrl_prefix/log.txt'
 train_dict = dict_object('train')
 test_dict = dict_object('test')
@@ -103,7 +104,8 @@ namespace = {
 
 draw_graph(namespace)
 
+
 plt.title('Acc1-CIFAR10-ResNet18-dirichlet50')
-save_path = os.path.join(save_dir, 'acc1_cifar10_resnet18_dirichlet50_default.png')
+save_path = os.path.join(save_dir, 'acc1_cifar10_resnet18_dirichlet50_acc1.png')
 plt.savefig(save_path, dpi=300)
 plt.close()
