@@ -57,24 +57,10 @@ def parser(log_path, train_dict, test_dict):
             extracter(line, test_dict)
 save_dir = './graph_img/'
 
-log_path = './output/cifar10/resnet/dirichlet/client50/default/log.txt'
-train_dict = dict_object('train')
-test_dict = dict_object('test')
-parser(log_path, train_dict, test_dict)
-
-
 plt.figure()
 
-namespace = {
-    'xlabel': 'Epochs',
-    'xaxis': test_dict.values['Epochs'],
-    'ylabel': 'Acc1 accuracy',
-    'yaxis': test_dict.values['Acc1'],
-    'label': 'default'}
 
-draw_graph(namespace)
-
-log_path = './output/cifar10/resnet/dirichlet/client50/mrl/log.txt'
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_topk16/log.txt'
 train_dict = dict_object('train')
 test_dict = dict_object('test')
 parser(log_path, train_dict, test_dict)
@@ -84,13 +70,11 @@ namespace = {
     'xaxis': test_dict.values['Epochs'],
     'ylabel': 'Acc1 accuracy',
     'yaxis': test_dict.values['Acc1'],
-    'label': 'mrl'}
+    'label': 'topk 16'}
 
 draw_graph(namespace)
 
-
-
-log_path = './output/cifar10/resnet/dirichlet/client50/mrl_prefix/log.txt'
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_topk32/log.txt'
 train_dict = dict_object('train')
 test_dict = dict_object('test')
 parser(log_path, train_dict, test_dict)
@@ -100,12 +84,52 @@ namespace = {
     'xaxis': test_dict.values['Epochs'],
     'ylabel': 'Acc1 accuracy',
     'yaxis': test_dict.values['Acc1'],
-    'label': 'mrl_prefix'}
+    'label': 'topk 32'}
 
 draw_graph(namespace)
 
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_topk64/log.txt'
+train_dict = dict_object('train')
+test_dict = dict_object('test')
+parser(log_path, train_dict, test_dict)
+
+namespace = {
+    'xlabel': 'Epochs',
+    'xaxis': test_dict.values['Epochs'],
+    'ylabel': 'Acc1 accuracy',
+    'yaxis': test_dict.values['Acc1'],
+    'label': 'topk 64'}
+
+draw_graph(namespace)
+
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_topk128/log.txt'
+train_dict = dict_object('train')
+test_dict = dict_object('test')
+parser(log_path, train_dict, test_dict)
+
+namespace = {
+    'xlabel': 'Epochs',
+    'xaxis': test_dict.values['Epochs'],
+    'ylabel': 'Acc1 accuracy',
+    'yaxis': test_dict.values['Acc1'],
+    'label': 'topk 128'}
+
+draw_graph(namespace)
+log_path = './output/cifar10/resnet/dirichlet/client50/mrl_topk256/log.txt'
+train_dict = dict_object('train')
+test_dict = dict_object('test')
+parser(log_path, train_dict, test_dict)
+
+namespace = {
+    'xlabel': 'Epochs',
+    'xaxis': test_dict.values['Epochs'],
+    'ylabel': 'Acc1 accuracy',
+    'yaxis': test_dict.values['Acc1'],
+    'label': 'topk 256'}
+
+draw_graph(namespace)
 
 plt.title('Acc1-CIFAR10-ResNet18-dirichlet50')
-save_path = os.path.join(save_dir, 'acc1_cifar10_resnet18_dirichlet50_acc1.png')
+save_path = os.path.join(save_dir, 'acc1_cifar10_resnet18_dirichlet50_mrl_difftopk.png')
 plt.savefig(save_path, dpi=300)
 plt.close()

@@ -1,12 +1,12 @@
-output_dir: ./output/cifar10/resnet/dirichlet/client50/mrl_prefix
+output_dir: ./output/cifar10/resnet/dirichlet/client50/default_seed777
 datapath: ./data/generated_dataset/cifar10/dirichlet_50
-seed: 111
-save_interval: 1
+seed: 777
+save_interval: 50
 model:
   model_name: ResNet
   block: BasicBlock
   num_classes: 10
-  num_blocks: [2,2,2,2]  
+  num_blocks: [2,2,2,2]
 server:
   base: avg
   num_clients: 50
@@ -14,10 +14,7 @@ server:
   epochs: 300
   batch_size: 1024
 client:
-  base: mrl
-  topk: 128
-  alpha: 0.5
-  prefix: True
+  base: avg
   batch_size : 64
   local_epochs: 10
   loss:

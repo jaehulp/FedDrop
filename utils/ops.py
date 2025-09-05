@@ -2,6 +2,7 @@ import os
 import math
 import torch
 import numpy as np
+import torch.nn as nn
 
 class features:
     pass
@@ -103,3 +104,10 @@ def generate_confusion_matrix(model, test_loader, num_classes, device='cuda'):
                 confusion[t.long(), p.long()] += 1
 
     return confusion
+
+def layer_wise_norms(model: nn.Module):
+    norms = {}
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            norms[name] = torch.norm(param.detach()).item()
+    return norms
